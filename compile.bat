@@ -1,0 +1,1 @@
+javac -cp lib\* -d classes src\edu\asu\nlp\fall\*.java
