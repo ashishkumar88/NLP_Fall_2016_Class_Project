@@ -155,7 +155,7 @@ public class CreateDependencyParse {
 		List<String> list_res = null;
 		try {
 			BufferedReader br = new BufferedReader(
-					new InputStreamReader(new FileInputStream("LDC2003T05" + File.separator + "single.txt")));
+					new InputStreamReader(new FileInputStream("LDC2003T05" + File.separator + "test.txt")));
 			String line = EMPTY_STRING;
 
 			String tempSection = EMPTY_STRING;
