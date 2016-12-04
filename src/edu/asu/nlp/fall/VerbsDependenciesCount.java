@@ -118,6 +118,7 @@ public class VerbsDependenciesCount {
 		dependenciesCount.verb2.setDependency(nodePair.getSecond().getDependency());
 		dependenciesCount.coreferringEntity = nodePair.getHeadWord();
 		allVerbDependency.add(dependenciesCount.verb2);
+		// System.out.println(dependenciesCount);
 		return dependenciesCount;
 	}
 

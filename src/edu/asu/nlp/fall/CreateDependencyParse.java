@@ -88,6 +88,7 @@ public class CreateDependencyParse {
 	private StanfordCoreNLP pipeline;
 	private Statement stmt;
 	private Connection conn;
+	private Map<String, String> posWord;
 
 	public Set<VerbDependency> getAllVerbDependency() {
 		return allVerbDependency;
@@ -131,6 +132,7 @@ public class CreateDependencyParse {
 			props.put("annotators", "tokenize, ssplit, pos, lemma");
 			pipeline = new StanfordCoreNLP(props);
 			allVerbDependency = new HashSet<>();
+			posWord = new HashMap<>();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -138,24 +140,44 @@ public class CreateDependencyParse {
 
 	public int checkPartOfKey(Map<String, Integer> entity_map, Set<String> keys, String key) {
 		for (String str : keys) {
-			if (str.indexOf(key) != -1) {
-				return entity_map.get(str);
+			for (String key2 : str.split(" ")) {
+				if (key.equals(key2)) {
+					return entity_map.get(str);
+				}
 			}
 		}
 		return -1;
 	}
 
+	public String checkKey(Map<String, String> entity_map, String key) {
+		for (String str : entity_map.keySet()) {
+			if (key.indexOf(str) != -1) {
+				return str;
+			}
+		}
+		return null;
+	}
+
 	/*
 	 * parses the document paragraph by paragraph
 	 */
-	public void startParse() {
+	public void startParse(boolean fullOrTest, boolean debugLogs) {
+		writeConsole("Parsing of cleaned corpus started************************************************************",
+				INFO_LOGS);
+		DEBUG_LOGS = debugLogs;
 		Map<String, Integer> entity_map = new HashMap<String, Integer>();
 
 		ArrayList<List<String>> list_res_whole = null;
 		List<String> list_res = null;
 		try {
+			String inputFileName = "";
+			if (fullOrTest) {
+				inputFileName = "full.txt";
+			} else {
+				inputFileName = "test.txt";
+			}
 			BufferedReader br = new BufferedReader(
-					new InputStreamReader(new FileInputStream("LDC2003T05" + File.separator + "test.txt")));
+					new InputStreamReader(new FileInputStream("LDC2003T05" + File.separator + inputFileName)));
 			String line = EMPTY_STRING;
 
 			String tempSection = EMPTY_STRING;
@@ -166,6 +188,8 @@ public class CreateDependencyParse {
 				Map<String, NodePair> node_map = null;
 				list_res = new ArrayList<String>();
 				if (line.indexOf(PARAGRAPH_SEPARATOR) != -1) {
+					entity_map.clear();
+					posWord.clear();
 					String[] sentences = tempSection.split("#");
 
 					final List<Mention> document = new ArrayList<Mention>();
@@ -204,6 +228,8 @@ public class CreateDependencyParse {
 							for (String tags : posTags) {
 								if (tags.indexOf("VB") != -1) {
 									verb_sen.add(tags.split("_")[0]);
+								} else if (tags.indexOf("NN") != -1) {
+									posWord.put(tags.split("_")[0].toLowerCase().trim(), tags.split("_")[1]);
 								}
 							}
 							verbs.add(verb_sen);
@@ -221,7 +247,9 @@ public class CreateDependencyParse {
 							}
 							writeConsoleInline("\n", DEBUG_LOGS);
 						}
+
 					}
+
 					writeConsole("\nVerbs extracted from the sentences and coreferences found.", INFO_LOGS);
 					if (DEBUG_LOGS) {
 						for (ArrayList<String> verbList : verbs) {
@@ -233,7 +261,12 @@ public class CreateDependencyParse {
 					}
 
 					int index = 0;
-
+					/*
+					 * for (String key : posWord.keySet()) {
+					 * System.out.println(key + " + " + posWord.get(key)); } for
+					 * (String key : entity_map.keySet()) {
+					 * System.out.println(key + " + " + entity_map.get(key)); }
+					 */
 					for (String sentence : sentences) {
 						list_res = new ArrayList<String>();
 						// node_map = new HashMap<String, NodePair>();
@@ -283,7 +316,7 @@ public class CreateDependencyParse {
 							if (ar[2].equals("nsubj") || ar[2].equals("dobj")) {
 								if (node_map.get(ar[0]) == null) {
 									NodePair np = new NodePair();
-									np.setHeadWord(ar[4]);
+
 									np.setKey(Integer.parseInt(ar[3]));
 									np.setFirst(new Node(ar[1], Dependency.parseString(ar[2])));
 									if (ar[2].equals("nsubj")) {
@@ -296,6 +329,21 @@ public class CreateDependencyParse {
 									NodePair np = node_map.get(ar[0]);
 									int val = Integer.parseInt(ar[3]);
 									if (!np.getFirst().getVerb().equals(ar[1]) && (val == np.getKey())) {
+
+										if (np.getHeadWord() == null) {
+											if (posWord.get(ar[4].trim()) != null) {
+												// System.out.println("######" +
+												// ar[4]);
+												np.setHeadWord(ar[4]);
+											} else {
+												// enter coreferring noun
+												// System.out.println("^^^^^^^^^^^^^###"
+												// + ar[4] + ", "
+												// + getCoreferringNoun(ar[0],
+												// entity_map));
+												np.setHeadWord(getCoreferringNoun(ar[0], entity_map));
+											}
+										}
 										np.setSecond(new Node(ar[1], Dependency.parseString(ar[2])));
 										if (ar[2].equals("nsubj")) {
 											np.getSecond().setSubject(np.getHeadWord());
@@ -333,10 +381,12 @@ public class CreateDependencyParse {
 								String[] tmp = str.split(" ");
 								if (second_verb.equals(tmp[1]) && (nodePair.getSecond().getSubject() == null)
 										&& tmp[2].equals("nsubj")) {
-									nodePair.getSecond().setSubject(tmp[4]);
+									// nodePair.getSecond().setSubject(tmp[4]);
+									nodePair.getSecond().setSubject(getCoreferringNoun(tmp[0], entity_map));
 								} else if (second_verb.equals(tmp[1]) && (nodePair.getSecond().getObject() == null)
 										&& tmp[2].equals("dobj")) {
-									nodePair.getSecond().setObject(tmp[4]);
+									// nodePair.getSecond().setObject(tmp[4]);
+									nodePair.getSecond().setObject(getCoreferringNoun(tmp[0], entity_map));
 								}
 							}
 						}
@@ -364,6 +414,20 @@ public class CreateDependencyParse {
 			exp.printStackTrace();
 		}
 
+		writeConsole("Parsing of cleaned corpus ended************************************************************",
+				INFO_LOGS);
+	}
+
+	private String getCoreferringNoun(String key, Map<String, Integer> entity_map) {
+		int numkey = Integer.parseInt(key);
+		for (Map.Entry<String, Integer> entry : entity_map.entrySet()) {
+			String noun = checkKey(posWord, entry.getKey());
+			// System.out.println(key + ", " + entry.getValue() + ", " + noun);
+			if ((entry.getValue() == numkey) && (noun != null)) {
+				return noun;
+			}
+		}
+		return null;
 	}
 
 	public void updateDataStructures() {
@@ -490,8 +554,23 @@ public class CreateDependencyParse {
 	}
 
 	public static void main(String[] args) {
+		boolean fullOrTest = true;
+		boolean debugLogs = false;
+		if (args.length == 1) {
+			if ("test".equals(args[0])) {
+				fullOrTest = false;
+			}
+		} else if (args.length == 2) {
+			if ("test".equals(args[0])) {
+				fullOrTest = false;
+			}
+
+			if ("debug".equals(args[1])) {
+				debugLogs = true;
+			}
+		}
 		CreateDependencyParse createDependencyParse = new CreateDependencyParse();
-		createDependencyParse.startParse();
+		createDependencyParse.startParse(fullOrTest, debugLogs);
 		createDependencyParse.updateDataStructures();
 		VerbDependencyGraph verbDependencyGraph = new VerbDependencyGraph();
 		verbDependencyGraph.publishDependencies(createDependencyParse.allEventPairs,
@@ -500,7 +579,11 @@ public class CreateDependencyParse {
 		EventChains eventChains = verbDependencyGraph.getEventChains();
 		ObjectMapper mapper = new ObjectMapper();
 		try {
-			mapper.writeValue(new File("output" + File.separator + "file.json"), eventChains);
+			File directory = new File(String.valueOf("output"));
+			if (!directory.exists()) {
+				directory.mkdir();
+			}
+			mapper.writeValue(new File("output" + File.separator + "unordered_event.json"), eventChains);
 		} catch (JsonGenerationException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

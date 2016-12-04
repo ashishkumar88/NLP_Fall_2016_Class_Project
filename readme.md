@@ -31,8 +31,12 @@ In order to run the project on an Ubuntu machine:
 In order to run the project on an Windows machine:
 1. execute compile.bat
 2. execute run.bat
+Command line argument for run : run.bat <test/full> <debug/no>
+test/full : to run the Program on test/full corpus
+debug/no : To show debug logs or not
 
-After the program has been executed, a file will be created inside the output folder which contains a JSON file with the narrative chain.
+After the program has been executed, a file will be created inside the output folder which contains a JSON file 
+, named unordered_event.json, with the narrative chain.
 A sample output JSON document is:
 
 {

@@ -9,6 +9,11 @@ public class EventChain {
 		eventChain = new ArrayList<>();
 	}
 
+	public EventChain(ArrayList<Event> eventChain) {
+		super();
+		this.eventChain = eventChain;
+	}
+
 	public EventChain(VerbsDependenciesCount dependenciesCount) {
 		eventChain = new ArrayList<>();
 		eventChain.add(new Event(dependenciesCount.getVerb1().getSubject(), dependenciesCount.getVerb1().getVerb(),

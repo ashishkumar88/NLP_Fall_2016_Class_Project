@@ -5,6 +5,10 @@ public class Event {
 	private String verb;
 	private String object;
 
+	public Event() {
+
+	}
+
 	public Event(String subject, String verb, String object) {
 		super();
 		this.subject = subject;
@@ -34,6 +38,11 @@ public class Event {
 
 	public void setObject(String object) {
 		this.object = object;
+	}
+
+	@Override
+	public String toString() {
+		return "Event [subject=" + subject + ", verb=" + verb + ", object=" + object + "]";
 	}
 
 }
